@@ -1,0 +1,97 @@
+---
+title: "Section 6.3: Multivariate Endogenous Variables"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Section 6.3: Multivariate Endogenous Variables}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(divR)
+library(ggplot2)
+```
+
+## Introduction
+
+In this section, we demonstrate `divR` on a multivariate treatment case where $X \in \mathbb{R}^2$:
+- $X_1$ and $X_2$ are both endogenous (affected by the same hidden confounder $H$).
+- The outcome $Y$ depends on both $X_1$ and $X_2$ directly.
+
+## Data Generating Process
+
+- $X_1 = \text{log}(2Z + H + \epsilon_{X1} + 7)$
+- $X_2 = Z \cdot (2H - 0.5\epsilon_{X2})$
+- $Y = X_1 + 2X_2 + 2H + \epsilon_Y$
+
+```{r dgp}
+g_log <- function(Z, H, eps_X) log(2 * Z + H + eps_X + 7)
+g_mult <- function(Z, H, eps_X) Z * (2 * H - 0.5 * eps_X)
+f_lin <- function(X1, X2, H, eps_Y) 1*X1 + 2*X2 + 2*H + eps_Y
+
+set.seed(1998)
+n <- 2000
+H <- rnorm(n)
+Z <- runif(n, 0, 3)
+eps_X1 <- rnorm(n)
+eps_X2 <- rnorm(n)
+eps_Y <- rnorm(n)
+
+X1 <- g_log(Z, H, eps_X1)
+X2 <- g_mult(Z, H, eps_X2)
+Y <- f_lin(X1, X2, H, eps_Y)
+
+X <- cbind(X1, X2)
+```
+
+## Fit divR Model
+
+```{r fit}
+model <- divR(Z = matrix(Z, ncol=1), 
+              X = X, 
+              Y = matrix(Y, ncol=1), 
+              num_epochs = 2000, 
+              silent = TRUE)
+```
+
+## Interventional Prediction: E[Y | do(X1, X2)]
+
+We vary $X_1$ while keeping $X_2$ fixed at its median to see the partial causal effect.
+
+```{r predict}
+x2_fixed <- median(X2)
+x1_grid <- seq(min(X1), max(X1), length.out = 100)
+X_test <- cbind(x1_grid, rep(x2_fixed, 100))
+
+Y_causal_pred <- predict(model, Xtest = X_test, type = "mean", nsample = 500)
+
+# True mean via large-scale simulation
+get_true_mean <- function(x1, x2, n_rep = 5000) {
+  H_rep <- rnorm(n_rep)
+  eps_Y_rep <- rnorm(n_rep)
+  Y_rep <- f_lin(rep(x1, n_rep), rep(x2, n_rep), H_rep, eps_Y_rep)
+  mean(Y_rep)
+}
+
+true_means <- sapply(x1_grid, function(x1) get_true_mean(x1, x2_fixed))
+
+plot_df <- data.frame(
+  X1 = x1_grid,
+  Predicted = as.vector(Y_causal_pred),
+  True = true_means
+)
+
+ggplot(plot_df, aes(x = X1)) +
+  geom_line(aes(y = Predicted, color = "divR Estimate"), size = 1) +
+  geom_line(aes(y = True, color = "True Causal"), linetype = "dashed", size = 1) +
+  labs(title = paste("Partial Effect of X1 (X2 fixed at", round(x2_fixed, 2), ")"),
+       y = "E[Y | do(X1, X2)]") +
+  theme_minimal()
+```

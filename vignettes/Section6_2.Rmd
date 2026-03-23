@@ -1,0 +1,87 @@
+---
+title: "Section 6.2: Binary Treatment and Quantile Effects"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Section 6.2: Binary Treatment and Quantile Effects}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(divR)
+library(ggplot2)
+```
+
+## Data Generating Process
+
+Section 6.2 explores a binary treatment $D$ with a logistic DGP:
+- $Z, H, \epsilon_D \sim \text{Logistic}(0, 1)$
+- $D = \mathbb{I}(4Z + 4H > \epsilon_D)$
+- $Y = \log(1 + \exp(18 + 8D + 6H))$
+
+```{r dgp}
+set.seed(12)
+n <- 1000
+Z <- rlogis(n)
+H <- rlogis(n)
+D <- as.numeric(4 * Z + 4 * H > rlogis(n))
+Y <- log(1 + exp(18 + 8 * D + 6 * H))
+
+df <- data.frame(Z=Z, D=D, Y=Y)
+```
+
+## Fit divR Model
+
+```{r fit}
+model <- divR(Z = matrix(Z, ncol=1), 
+              X = matrix(D, ncol=1), 
+              Y = matrix(Y, ncol=1), 
+              num_epochs = 2000, 
+              silent = TRUE)
+```
+
+## Quantile Treatment Effect (QTE)
+
+The QTE is defined as $Q_\tau(Y | do(D=1)) - Q_\tau(Y | do(D=0))$.
+
+```{r qte}
+taus <- c(0.1, 0.25, 0.5, 0.75, 0.9)
+
+# Predict quantiles for do(D=0) and do(D=1)
+q0 <- predict(model, Xtest = matrix(0, nrow=1), type = "quantile", quantiles = taus, nsample = 1000)
+q1 <- predict(model, Xtest = matrix(1, nrow=1), type = "quantile", quantiles = taus, nsample = 1000)
+
+qte_pred <- q1 - q0
+
+# True QTE via large-scale simulation
+n_oracle <- 10000
+H_oracle <- rlogis(n_oracle)
+Y0_oracle <- log(1 + exp(18 + 8*0 + 6*H_oracle))
+Y1_oracle <- log(1 + exp(18 + 8*1 + 6*H_oracle))
+
+q0_true <- quantile(Y0_oracle, taus)
+q1_true <- quantile(Y1_oracle, taus)
+qte_true <- q1_true - q0_true
+
+plot_df <- data.frame(
+  Tau = taus,
+  Estimated = as.vector(qte_pred),
+  True = as.vector(qte_true)
+)
+
+ggplot(plot_df, aes(x = Tau)) +
+  geom_line(aes(y = Estimated, color = "divR QTE"), size = 1) +
+  geom_point(aes(y = Estimated, color = "divR QTE")) +
+  geom_line(aes(y = True, color = "True QTE"), linetype = "dashed", size = 1) +
+  geom_point(aes(y = True, color = "True QTE")) +
+  labs(title = "Section 6.2 Binary Treatment QTE",
+       x = "Quantile (Tau)", y = "QTE") +
+  theme_minimal()
+```

@@ -1,0 +1,7 @@
+S3method(predict, divR)
+S3method(print, divR)
+export(divR)
+import(checkmate)
+importFrom(stats, model.matrix)
+importFrom(stats, quantile)
+importFrom(stats, sd)

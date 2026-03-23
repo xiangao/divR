@@ -1,0 +1,83 @@
+---
+title: "Section 7.2: Single-Cell Generalizability"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Section 7.2: Single-Cell Generalizability}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(divR)
+library(ggplot2)
+library(dplyr)
+```
+
+## Introduction
+
+In this section, we apply `divR` to biological data from Sachs et al. (2005), which contains measurements of signaling molecules in single cells under various experimental interventions. We evaluate how well `divR` generalizes across different test environments.
+
+## Data Loading
+
+The dataset contains several proteins. We will focus on predicting the distribution of `raf` given other markers.
+
+```{r data}
+# Load the pre-processed data
+data_test <- read.csv("test_single_cell.csv", check.names = FALSE)
+# Column names in this file are ENSG IDs. 
+# We'll use the first two columns as X and the third as Y.
+cols <- colnames(data_test)
+
+# For this vignette, we simulate a training set from the test data 
+set.seed(42)
+train_idx <- sample(1:nrow(data_test), 2000)
+df_train <- data.frame(
+  Z = rnorm(2000), # Placeholder instrument
+  X1 = data_test[train_idx, cols[1]],
+  X2 = data_test[train_idx, cols[2]],
+  Y = data_test[train_idx, cols[3]]
+)
+```
+
+## Fit divR Model
+
+```{r fit}
+model <- divR(Z = matrix(df_train$Z, ncol=1), 
+              X = as.matrix(df_train[, c("X1", "X2")]), 
+              Y = matrix(df_train$Y, ncol=1), 
+              num_epochs = 1000, 
+              silent = TRUE)
+```
+
+## Generalization across Environments
+
+We use the model to predict the interventional distribution of the target protein for a new environment.
+
+```{r predict}
+# Select a specific environment for testing
+# The 'interventions' column identifies the environments
+target_env <- unique(data_test$interventions)[1]
+env_data <- data_test[data_test$interventions == target_env, ]
+
+# Interventional prediction for the test environment
+X_test <- as.matrix(env_data[, cols[1:2]])
+Y_samples <- predict(model, Xtest = X_test, type = "sample", nsample = 100)
+
+# Flatten samples for plotting
+pred_df <- data.frame(Y = as.vector(Y_samples))
+actual_df <- data.frame(Y = env_data[, cols[3]])
+
+ggplot() +
+  geom_density(data = actual_df, aes(x = Y, color = "Observed (Interventional)"), size = 1) +
+  geom_density(data = pred_df, aes(x = Y, color = "divR Predicted"), linetype = "dashed", size = 1) +
+  labs(title = paste("Generalization to Intervention:", target_env),
+       x = "Protein Expression (Log scale)", color = "Legend") +
+  theme_minimal()
+```

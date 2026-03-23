@@ -1,0 +1,84 @@
+---
+title: "Section 6.1: Sinusoidal DGP"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Section 6.1: Sinusoidal DGP}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+# Use load_all to load the local version of the package
+library(divR)
+library(ggplot2)
+```
+
+## Data Generating Process
+
+In Section 6.1, one of the more interesting cases is the sinusoidal setting:
+- $g(Z, H, \epsilon_X) = Z + H + \epsilon_X$
+- $f(X, H, \epsilon_Y) = 3 \sin(1.5 X) + 2X - 3H + \epsilon_Y$
+
+```{r dgp}
+g_lin <- function(Z, H, eps_X) Z + H + eps_X
+f_sin <- function(X, H, eps_Y) 3 * sin(1.5 * X) + 2 * X - 3 * H + eps_Y
+
+set.seed(42)
+n_train <- 5000
+H <- rnorm(n_train)
+Z <- runif(n_train, 0, 3)
+eps_X <- rnorm(n_train)
+eps_Y <- rnorm(n_train)
+
+X <- g_lin(Z, H, eps_X)
+Y <- f_sin(X, H, eps_Y)
+```
+
+## Fit divR Model
+
+```{r fit}
+# For complex functions, we increase the number of epochs and hidden dimension
+model <- divR(Z = matrix(Z, ncol=1), 
+              X = matrix(X, ncol=1), 
+              Y = matrix(Y, ncol=1), 
+              hidden_dim = 128,
+              num_epochs = 2000, 
+              silent = TRUE)
+```
+
+## Interventional Prediction
+
+```{r predict}
+X_grid <- matrix(seq(min(X), max(X), length.out = 100), ncol = 1)
+Y_causal_pred <- predict(model, Xtest = X_grid, type = "mean", nsample = 500)
+
+get_true_mean <- function(x_val, n_rep = 5000) {
+  H_rep <- rnorm(n_rep)
+  eps_Y_rep <- rnorm(n_rep)
+  Y_rep <- f_sin(rep(x_val, n_rep), H_rep, eps_Y_rep)
+  mean(Y_rep)
+}
+
+true_means <- sapply(X_grid, get_true_mean)
+
+plot_df <- data.frame(
+  X = as.vector(X_grid),
+  Predicted = as.vector(Y_causal_pred),
+  True = true_means
+)
+
+ggplot(plot_df, aes(x = X)) +
+  geom_line(aes(y = Predicted, color = "divR Estimate"), size = 1) +
+  geom_line(aes(y = True, color = "True Causal"), linetype = "dashed", size = 1) +
+  labs(title = "Section 6.1 Sinusoidal Example",
+       y = "E[Y | do(X)]",
+       color = "Legend") +
+  theme_minimal()
+```

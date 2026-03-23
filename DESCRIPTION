@@ -1,0 +1,27 @@
+Package: divR
+Type: Package
+Title: Distributional Instrumental Variable Regression
+Version: 0.1.0
+Authors@R: c(
+    person("Anastasiia", "Holovchak", role = c("aut")),
+    person("Sorawit", "Saengkyongam", role = "aut"),
+    person("Nicolai", "Meinshausen", role = "aut"),
+    person("Xinwei", "Shen", role = "aut"),
+    person("Xian", "Gao", email = "xiangao@uchicago.edu", role = c("cre")))
+Description: Implements Distributional Instrumental Variable (DIV) regression
+    using energy score-based generative modelling via torch. Estimates the full
+    interventional distribution P(Y|do(X)) in the presence of unmeasured
+    confounding, yielding interventional means, quantiles, and samples.
+    Based on Holovchak, Saengkyongam, Meinshausen & Shen (2025)
+    <arXiv:2502.07641>.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Imports:
+    checkmate
+Suggests:
+    testthat (>= 3.2.0),
+    torch,
+    vctrs,
+    withr
+RoxygenNote: 7.3.2
+VignetteBuilder: knitr
