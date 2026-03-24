@@ -1,0 +1,95 @@
+---
+title: "Section 5.1: Simulation Study (Sinusoidal setting)"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Section 5.1: Simulation Study (Sinusoidal setting)}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+```{r setup}
+library(divR)
+library(ggplot2)
+```
+
+## Introduction
+
+In Section 5.1 of the paper, we conduct an extensive simulation study to examine the performance of DIV across several different settings. This vignette focuses on the most complex setting (Settings 5 & 6 in Figure 4), which features a highly nonlinear post-additive noise outcome model.
+
+## Data Generating Process
+
+The DGP for the sinusoidal setting is defined as:
+- $g(Z, H, \epsilon_X) = Z + H + \epsilon_X$
+- $f(X, H, \epsilon_Y) = 3 \sin(1.5 X) + 2X - 3H + \epsilon_Y$
+
+This represents a "post-additive" noise model where the effects of $X$ and $H$ are combined nonlinearly through the sine function before being added to the linear trend.
+
+```{r dgp}
+g_lin <- function(Z, H, eps_X) Z + H + eps_X
+f_sin <- function(X, H, eps_Y) 3 * sin(1.5 * X) + 2 * X - 3 * H + eps_Y
+
+set.seed(42)
+n_train <- 5000
+H <- rnorm(n_train)
+Z <- runif(n_train, 0, 3)
+eps_X <- rnorm(n_train)
+eps_Y <- rnorm(n_train)
+
+X <- g_lin(Z, H, eps_X)
+Y <- f_sin(X, H, eps_Y)
+```
+
+## Figure 4: Estimated Interventional Mean Function
+
+In Figure 4 of the paper, we compare the DIV estimated interventional mean function $\hat{\mu}^*(x)$ with the true mean function $\mu^*(x)$. Even in this highly nonlinear setting, DIV is able to recover the underlying sine curve.
+
+```{r fit}
+# For complex functions, we increase the number of epochs and hidden dimension
+model <- divR(Z = matrix(Z, ncol=1),
+              X = matrix(X, ncol=1),
+              Y = matrix(Y, ncol=1),
+              hidden_dim = 128,
+              num_epochs = 2000,
+              silent = TRUE)
+```
+
+```{r predict}
+X_grid <- matrix(seq(min(X), max(X), length.out = 100), ncol = 1)
+Y_causal_pred <- predict(model, Xtest = X_grid, type = "mean", nsample = 500)
+
+get_true_mean <- function(x_val, n_rep = 5000) {
+  H_rep <- rnorm(n_rep); eps_Y_rep <- rnorm(n_rep)
+  Y_rep <- f_sin(rep(x_val, n_rep), H_rep, eps_Y_rep)
+  mean(Y_rep)
+}
+true_means <- sapply(X_grid, get_true_mean)
+
+plot_df <- data.frame(
+  X = as.vector(X_grid),
+  Predicted = as.vector(Y_causal_pred),
+  True = true_means
+)
+
+ggplot(plot_df, aes(x = X)) +
+  geom_line(aes(y = Predicted, color = "DIV Estimate"), linewidth = 1) +
+  geom_line(aes(y = True, color = "True Causal"), linetype = "dashed", linewidth = 1) +
+  scale_color_manual(values = c("DIV Estimate" = "darkgoldenrod1", "True Causal" = "black")) +
+  labs(title = "Figure 4 (Partial): Sinusoidal Interventional Mean",
+       subtitle = "Comparison of DIV estimated mean and true causal mean",
+       y = "E[Y | do(X)]",
+       color = "Method") +
+  theme_minimal()
+```
+
+## Methodology Note
+
+As discussed in Section 5.1, DIV's ability to model complex, nonlinear relationships allows it to outperform benchmark methods in settings like this one. While methods that assume linearity or specific additive structures might struggle, the conditional generative approach of DIV captures the full distributional response.

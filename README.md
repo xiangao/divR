@@ -45,18 +45,18 @@ pred_s <- predict(model, Xtest = Xtest, type = "sample", nsample = 100)
 
 ## Vignettes
 
-### Simulation Studies (Paper Sections 3 & 6)
+### Simulation Studies (Paper Sections 3 & 5)
 
-- [Section 3.3: Softplus Example](vignettes/Section3_3.Rmd) — Toy motivating example
-- [Section 6.1: Sinusoidal DGP](vignettes/Section6_1.Rmd) — Nonlinear treatment effect with confounding
-- [Section 6.2: Binary Treatment & QTE](vignettes/Section6_2.Rmd) — Quantile treatment effects
-- [Section 6.3: Multivariate X](vignettes/Section6_3.Rmd) — Multiple endogenous variables
-- [Section 6.4: Instrument Strength](vignettes/Section6_4.Rmd) — Weak vs strong instruments
+- [Section 3.3: Softplus Example](vignettes/Section3_3.Rmd) — Motivating example with distributional overlap and density comparisons
+- [Section 5.1: Sinusoidal DGP](vignettes/Section5_1.Rmd) — Nonlinear post-additive noise outcome model
+- [Section 5.2: Binary Treatment & QTE](vignettes/Section5_2.Rmd) — Quantile treatment effects with logistic DGP
+- [Section 5.3: Multivariate X](vignettes/Section5_3.Rmd) — Multiple endogenous variables with partial interventional mean
+- [Section 5.4: Instrument Strength](vignettes/Section5_4.Rmd) — DIV robustness to weak instruments (alpha=0 vs alpha=2)
 
-### Real-Data Applications (Paper Section 7)
+### Real-Data Applications (Paper Section 6)
 
-- [Section 7.1: Colonial Origins](vignettes/Section7_1.Rmd) — Acemoglu et al. institutional quality and development
-- [Section 7.2: Single-Cell Biology](vignettes/Section7_2.Rmd) — Gene expression generalizability
+- [Section 6.1: Colonial Origins](vignettes/Section6_1.Rmd) — Acemoglu et al. (2001), DIV vs 2SLS vs OLS
+- [Section 6.2: Single-Cell Biology](vignettes/Section6_2.Rmd) — Sachs et al. (2005) protein signaling generalizability
 
 ## References
 

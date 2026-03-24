@@ -40,9 +40,9 @@ Noise order in training and prediction must match: `[input, eps_specific, eps_h,
 
 ## Vignettes
 
-7 vignettes reproducing the paper: Sections 3.3, 6.1–6.4 (simulations), 7.1–7.2 (real data).
+7 vignettes reproducing the paper: Sections 3.3, 5.1–5.4 (simulations), 6.1–6.2 (real data).
 
-Render: `Rscript -e "rmarkdown::render('vignettes/Section6_1.Rmd')"`
+Render: `Rscript -e "rmarkdown::render('vignettes/Section5_1.Rmd')"`
 
 Use `cache: false` for all torch-dependent chunks.
 

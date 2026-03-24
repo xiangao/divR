@@ -10,28 +10,49 @@ vignette: >
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
 )
 ```
 
 ```{r setup}
-# Use load_all to load the local version of the package
 library(divR)
 library(ggplot2)
+library(dplyr)
+library(tidyr)
 ```
 
-## Data Generating Process
+## Methodology: Distributional Instrumental Variables (DIV)
 
-In Section 3.3, the following softplus DGP is used:
-- $g(Z, H, \epsilon_X) = \log(1 + \exp(Z + H + \epsilon_X))$
-- $f(X, H, \epsilon_Y) = 0.5 \cdot \log(1 + \exp(2X + 2H + 4\epsilon_Y))$
+The `divR` package implements **Distributional Instrumental Variables (DIV)**, a method designed to estimate the full interventional distribution $P(Y | do(X = x))$ in the presence of unobserved confounding.
+
+Traditional IV methods like 2SLS focus only on the **Average Treatment Effect (ATE)**, which is the mean of this distribution. However, in many applications, we care about the entire distribution---such as its variance, tail behavior, or specific quantiles.
+
+### The Model Structure
+DIV uses a generator-based approach with two neural networks:
+1.  **Generator $g(Z, \epsilon_X, \epsilon_H)$**: Models the relationship between the instrument $Z$, the hidden confounder $H$ (represented by $\epsilon_H$), and the treatment $X$.
+2.  **Generator $f(X, \epsilon_Y, \epsilon_H)$**: Models the relationship between the treatment $X$, the hidden confounder $H$, and the outcome $Y$.
+
+By sharing the noise component $\epsilon_H$ between both generators, DIV explicitly models the "backdoor" path caused by unobserved confounding. During training, it minimizes an **energy loss** that ensures the generated joint distribution of $(X, Y)$ matches the observed data.
+
+## Data Generating Process (Softplus)
+
+In this example, we use a highly nonlinear "Softplus" DGP. The softplus function $\log(1 + \exp(\cdot))$ is a smooth approximation of the ReLU function, making it a challenging test for linear IV methods.
+
+- **Confounder**: $H \sim \mathcal{N}(0, 1)$
+- **Instrument**: $Z \sim \text{Uniform}(0, 3)$
+- **Treatment**: $X = \log(1 + \exp(Z + H + \epsilon_X))$
+- **Outcome**: $Y = 0.5 \cdot \log(1 + \exp(2X + 2H + 4\epsilon_Y))$
+
+The presence of $H$ in both equations creates a strong correlation between $X$ and $Y$ that is *not* causal. DIV must "unlearn" this correlation to find the true effect of $X$ on $Y$.
 
 ```{r dgp}
 g_softplus <- function(Z, H, eps_X) log(1 + exp(Z + H + eps_X))
-f_softplus <- function(X, H, eps_Y) 0.5 * log(1 + exp(2 * X + 2 * H + 4 * eps_Y))
+f_softplus <- function(X, H, eps_Y) 0.5 * log(1 + exp(2*X + 2*H + 4*eps_Y))
 
-set.seed(1994)
-n_train <- 2000
+set.seed(42)
+n_train <- 5000
 H <- rnorm(n_train)
 Z <- runif(n_train, 0, 3)
 eps_X <- rnorm(n_train)
@@ -39,49 +60,119 @@ eps_Y <- rnorm(n_train)
 
 X <- g_softplus(Z, H, eps_X)
 Y <- f_softplus(X, H, eps_Y)
-
-df_train <- data.frame(Z=Z, X=X, Y=Y)
 ```
 
-## Fit divR Model
+## Fitting the Model
+
+We train the DIV model for 2,000 epochs. Because the relationships are nonlinear, we use a sufficiently large number of epochs to allow the neural networks to converge to the correct functional forms.
 
 ```{r fit}
-model <- divR(Z = matrix(Z, ncol=1), 
-              X = matrix(X, ncol=1), 
-              Y = matrix(Y, ncol=1), 
-              num_epochs = 1000, 
+model <- divR(Z = matrix(Z, ncol=1),
+              X = matrix(X, ncol=1),
+              Y = matrix(Y, ncol=1),
+              num_epochs = 2000,
               silent = TRUE)
 ```
 
-## Interventional Prediction
+## Figure 2: Visualizing the Interventional Distribution
 
-We compare the model's interventional mean prediction $E[Y | do(X)]$ with the true interventional mean.
+Figure 2 compares the **True Interventional Distribution** $P_Y^{do(X=x)}$ with the **Estimated Interventional Distribution** $\hat{P}_Y^{do(X=x)}$.
 
-```{r predict}
-X_grid <- matrix(seq(min(X), max(X), length.out = 100), ncol = 1)
-Y_causal_pred <- predict(model, Xtest = X_grid, type = "mean", nsample = 500)
+- **Points (Blue/Yellow)**: These represent individual samples. For a fixed $X=x$, they show the range of values $Y$ would take if we intervened and set $X$ to that value.
+- **Solid Lines (Black/Grey)**: These are the **Causal Quantiles** $q_{\alpha}^*(x)$. We plot the 10th, 50th (median), and 90th percentiles.
+- **Goal**: The yellow dots and grey lines (Estimated) should overlap with the blue dots and black lines (True).
 
-# True interventional mean via simulation
-get_true_mean <- function(x_val, n_rep = 5000) {
-  H_rep <- rnorm(n_rep)
-  eps_Y_rep <- rnorm(n_rep)
-  Y_rep <- f_softplus(rep(x_val, n_rep), H_rep, eps_Y_rep)
-  mean(Y_rep)
-}
+```{r figure2}
+# 1. Samples for scatter plot
+Y_true_int <- f_softplus(X, rnorm(n_train), rnorm(n_train))
+Y_est_int <- predict(model, Xtest = matrix(X, ncol=1), type = "sample", nsample = 1)
+Y_est_int <- as.vector(Y_est_int)
 
-true_means <- sapply(X_grid, get_true_mean)
-
-plot_df <- data.frame(
-  X = as.vector(X_grid),
-  Predicted = as.vector(Y_causal_pred),
-  True = true_means
+plot_samples <- data.frame(
+  X = rep(X, 2),
+  Y = c(Y_true_int, Y_est_int),
+  Source = rep(c("True", "Estimated"), each = n_train)
 )
 
-ggplot(plot_df, aes(x = X)) +
-  geom_line(aes(y = Predicted, color = "divR Estimate"), size = 1) +
-  geom_line(aes(y = True, color = "True Causal"), linetype = "dashed", size = 1) +
-  labs(title = "Section 3.3 Softplus Example",
-       y = "E[Y | do(X)]",
-       color = "Legend") +
-  theme_minimal()
+X_grid <- matrix(seq(min(X), max(X), length.out = 100), ncol = 1)
+
+# 2. Quantiles for line plot
+taus <- c(0.1, 0.5, 0.9)
+div_quant <- predict(model, Xtest = X_grid, type = "quantile", quantiles = taus, nsample = 1000)
+
+get_true_quantiles <- function(x_val, n_rep = 5000) {
+  H_rep <- rnorm(n_rep); eps_Y_rep <- rnorm(n_rep)
+  Y_rep <- f_softplus(rep(x_val, n_rep), H_rep, eps_Y_rep)
+  quantile(Y_rep, taus)
+}
+true_quants <- t(sapply(X_grid, get_true_quantiles))
+
+quant_df <- data.frame(
+  X = as.vector(X_grid),
+  True_Q10 = true_quants[, 1], True_Q50 = true_quants[, 2], True_Q90 = true_quants[, 3],
+  Est_Q10 = div_quant[, 1], Est_Q50 = div_quant[, 2], Est_Q90 = div_quant[, 3]
+)
+
+quant_df_long <- quant_df %>%
+  pivot_longer(cols = -X, names_to = "Metric", values_to = "Y") %>%
+  mutate(
+    Source = ifelse(grepl("True", Metric), "Q_True", "Q_Estimated"),
+    Quantile = gsub("True_|Est_", "", Metric)
+  )
+
+ggplot() +
+  geom_point(data = plot_samples, aes(x = X, y = Y, color = Source), alpha = 0.3, size = 0.5) +
+  geom_line(data = quant_df_long, aes(x = X, y = Y, group = Metric, color = Source), linewidth = 1) +
+  scale_color_manual(
+    values = c("True" = "deepskyblue", "Estimated" = "darkgoldenrod1", "Q_True" = "black", "Q_Estimated" = "grey50"),
+    labels = c(
+      "True" = expression(paste("Sample from ", P[Y]^{do(X==x)})),
+      "Estimated" = expression(paste("Sample from ", hat(P)[Y]^{do(X==x)})),
+      "Q_True" = expression(q[alpha]^"*" * (x)),
+      "Q_Estimated" = expression(hat(q)[alpha]^"*" * (x))
+    )
+  ) +
+  labs(title = "Figure 2: Causal Effect and Distributional Overlap",
+       subtitle = "Dots show interventional samples; lines show 10th, 50th, 90th quantiles",
+       x = "Treatment (X)", y = "Outcome (Y)", color = "") +
+  theme_minimal() +
+  theme(legend.text.align = 0)
+```
+
+## Figure 3: Density Comparison at Specific Intervention Points
+
+While Figure 2 shows the overall trend, Figure 3 looks at the "shape" of the distribution at specific points. We pick the 25th, 50th, and 75th percentiles of the observed treatment $X$ and perform an intervention $do(X = x)$.
+
+- **Interpretation**: Each panel shows the probability density of $Y$ if *everyone* in the population were assigned the same value of $X$.
+- **Key Insight**: Notice how the distribution of $Y$ shifts and potentially changes shape as $X$ increases. DIV accurately captures these distributional shifts, not just the change in mean.
+
+```{r figure3}
+x_vals <- quantile(X, c(0.25, 0.5, 0.75))
+n_samples_density <- 3000
+
+density_data <- list()
+for (i in seq_along(x_vals)) {
+  xv <- x_vals[i]
+  y_true <- f_softplus(rep(xv, n_samples_density), rnorm(n_samples_density), rnorm(n_samples_density))
+  y_est <- predict(model, Xtest = matrix(xv, ncol=1), type = "sample", nsample = n_samples_density)
+  density_data[[i]] <- data.frame(
+    Y = c(y_true, as.vector(y_est)),
+    Source = rep(c("True", "Estimated"), each = n_samples_density),
+    X_Val = names(x_vals)[i]
+  )
+}
+
+plot_density_df <- do.call(rbind, density_data)
+plot_density_df$X_Val <- factor(plot_density_df$X_Val, levels = c("25%", "50%", "75%"),
+                                labels = c("x[Q25]", "x[Q50]", "x[Q75]"))
+
+ggplot(plot_density_df, aes(x = Y, fill = Source)) +
+  geom_density(alpha = 0.5) +
+  facet_grid(rows = vars(X_Val), labeller = label_parsed) +
+  scale_fill_manual(values = c("True" = "deepskyblue", "Estimated" = "darkgoldenrod1")) +
+  labs(title = "Figure 3: Interventional Density Estimates",
+       subtitle = "Kernel density comparison at specific intervention values of X",
+       x = "Outcome (Y)", y = expression(P[Y]^{do(X==x)})) +
+  theme_minimal() +
+  xlim(-2, 12)
 ```
