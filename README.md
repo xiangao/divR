@@ -1,5 +1,7 @@
 # divR
 
+[![pkgdown](https://img.shields.io/badge/pkgdown-site-blue.svg)](https://xiangao.github.io/divR/)
+
 Distributional Instrumental Variable Regression in R.
 
 ## Overview
@@ -45,18 +47,20 @@ pred_s <- predict(model, Xtest = Xtest, type = "sample", nsample = 100)
 
 ## Vignettes
 
+Full documentation: **<https://xiangao.github.io/divR/>**
+
 ### Simulation Studies (Paper Sections 3 & 5)
 
-- [Section 3.3: Softplus Example](vignettes/Section3_3.Rmd) — Motivating example with distributional overlap and density comparisons
-- [Section 5.1: Sinusoidal DGP](vignettes/Section5_1.Rmd) — Nonlinear post-additive noise outcome model
-- [Section 5.2: Binary Treatment & QTE](vignettes/Section5_2.Rmd) — Quantile treatment effects with logistic DGP
-- [Section 5.3: Multivariate X](vignettes/Section5_3.Rmd) — Multiple endogenous variables with partial interventional mean
-- [Section 5.4: Instrument Strength](vignettes/Section5_4.Rmd) — DIV robustness to weak instruments (alpha=0 vs alpha=2)
+- [Section 3.3: Softplus Example](https://xiangao.github.io/divR/articles/Section3_3.html) — Motivating example with distributional overlap and density comparisons
+- [Section 5.1: Sinusoidal DGP](https://xiangao.github.io/divR/articles/Section5_1.html) — Nonlinear post-additive noise outcome model
+- [Section 5.2: Binary Treatment & QTE](https://xiangao.github.io/divR/articles/Section5_2.html) — Quantile treatment effects with logistic DGP
+- [Section 5.3: Multivariate X](https://xiangao.github.io/divR/articles/Section5_3.html) — Multiple endogenous variables with partial interventional mean
+- [Section 5.4: Instrument Strength](https://xiangao.github.io/divR/articles/Section5_4.html) — DIV robustness to weak instruments (alpha=0 vs alpha=2)
 
 ### Real-Data Applications (Paper Section 6)
 
-- [Section 6.1: Colonial Origins](vignettes/Section6_1.Rmd) — Acemoglu et al. (2001), DIV vs 2SLS vs OLS
-- [Section 6.2: Single-Cell Biology](vignettes/Section6_2.Rmd) — Sachs et al. (2005) protein signaling generalizability
+- [Section 6.1: Colonial Origins](https://xiangao.github.io/divR/articles/Section6_1.html) — Acemoglu et al. (2001), DIV vs 2SLS vs OLS
+- [Section 6.2: Single-Cell Biology](https://xiangao.github.io/divR/articles/Section6_2.html) — Sachs et al. (2005) protein signaling generalizability
 
 ## References
 

@@ -1,0 +1,27 @@
+url: https://xiangao.github.io/divR/
+
+template:
+  bootstrap: 5
+
+navbar:
+  structure:
+    left:  [intro, articles, news]
+    right: [search, github]
+
+articles:
+  - title: Simulation studies
+    contents:
+      - Section3_3
+      - Section5_1
+      - Section5_2
+      - Section5_3
+      - Section5_4
+  - title: Real-data applications
+    contents:
+      - Section6_1
+      - Section6_2
+
+home:
+  links:
+    - text: DIV paper
+      href: https://arxiv.org/abs/2502.07641

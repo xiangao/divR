@@ -15,10 +15,13 @@ Description: Implements Distributional Instrumental Variable (DIV) regression
     Based on Holovchak, Saengkyongam, Meinshausen & Shen (2025)
     <arXiv:2502.07641>.
 License: MIT + file LICENSE
+URL: https://xiangao.github.io/divR/, https://github.com/xiangao/divR
 Encoding: UTF-8
 Imports:
     checkmate
 Suggests:
+    knitr,
+    rmarkdown,
     testthat (>= 3.2.0),
     torch,
     vctrs,
