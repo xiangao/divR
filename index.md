@@ -2,20 +2,20 @@
 
 [![pkgdown](https://img.shields.io/badge/pkgdown-site-blue.svg)](https://xiangao.github.io/divR/)
 
-Distributional Instrumental Variable Regression in R.
+Distributional instrumental variable regression in R.
 
 ## Overview
 
-divR implements the Distributional Instrumental Variable (DIV) method
-from Holovchak, Saengkyongam, Meinshausen & Shen (2025). DIV uses energy
-score-based generative modelling to estimate the full interventional
-distribution P(Y\|do(X)) in the presence of unmeasured confounding,
-yielding interventional means, quantiles, and samples.
+`divR` implements the Distributional Instrumental Variable method of
+Holovchak, Saengkyongam, Meinshausen, and Shen (2025). The target is the
+interventional distribution `P(Y | do(X))` when treatment is endogenous
+and an instrument is available. Once the distribution is fit, one can
+report means, quantiles, or simulated draws.
 
 The package is based on the
 [DistributionIV](https://cran.r-project.org/package=DistributionIV) CRAN
-package by the same authors, with additional vignettes reproducing the
-paper’s simulation studies and real-data applications.
+package by the same authors. I added vignettes for the paper simulations
+and applications.
 
 ## Installation
 
