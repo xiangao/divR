@@ -23,11 +23,14 @@ library(dplyr)
 library(tidyr)
 ```
 
-## Methodology: Distributional Instrumental Variables (DIV)
+## Distributional Instrumental Variables
 
-The `divR` package implements **Distributional Instrumental Variables (DIV)**, a method designed to estimate the full interventional distribution $P(Y | do(X = x))$ in the presence of unobserved confounding.
+`divR` implements Distributional Instrumental Variables (DIV). The target is the
+interventional distribution $P(Y | do(X = x))$ when treatment is confounded and
+an instrument is available.
 
-Traditional IV methods like 2SLS focus only on the **Average Treatment Effect (ATE)**, which is the mean of this distribution. However, in many applications, we care about the entire distribution---such as its variance, tail behavior, or specific quantiles.
+2SLS focuses on a mean effect. Here the object is the whole distribution, so we
+can also look at quantiles and tail behavior.
 
 ### The Model Structure
 DIV uses a generator-based approach with two neural networks:
@@ -38,14 +41,16 @@ By sharing the noise component $\epsilon_H$ between both generators, DIV explici
 
 ## Data Generating Process (Softplus)
 
-In this example, we use a highly nonlinear "Softplus" DGP. The softplus function $\log(1 + \exp(\cdot))$ is a smooth approximation of the ReLU function, making it a challenging test for linear IV methods.
+This example uses the softplus DGP from the paper. The function is nonlinear,
+so it is a useful case where a linear IV fit is not the right benchmark.
 
 - **Confounder**: $H \sim \mathcal{N}(0, 1)$
 - **Instrument**: $Z \sim \text{Uniform}(0, 3)$
 - **Treatment**: $X = \log(1 + \exp(Z + H + \epsilon_X))$
 - **Outcome**: $Y = 0.5 \cdot \log(1 + \exp(2X + 2H + 4\epsilon_Y))$
 
-The presence of $H$ in both equations creates a strong correlation between $X$ and $Y$ that is *not* causal. DIV must "unlearn" this correlation to find the true effect of $X$ on $Y$.
+The same hidden variable $H$ enters both equations, so $X$ and $Y$ are
+correlated even apart from the causal effect of $X$.
 
 ```{r dgp}
 g_softplus <- function(Z, H, eps_X) log(1 + exp(Z + H + eps_X))

@@ -117,8 +117,12 @@ ggplot(plot_df, aes(x = X)) +
 It may seem counter-intuitive that the "Weak" line is so close to the true causal function. This is exactly what the paper predicts:
 1.  **Full Distribution vs. Mean**: While $\alpha=0$ means $Z$ doesn't shift the average value of $X$, the **variance** of $X$ still depends on $Z^2$. DIV's conditional generator successfully "learns" from this variance shift.
 2.  **Numerical Stability**: In the "Strong" case ($\alpha=2$), the instrument introduces much more noise and variation into $X$. This larger range can sometimes be slightly more challenging to optimize for a fixed number of epochs.
-3.  **Identifiability**: The paper proves that the interventional distribution is identifiable even when the mean relevance is zero, provided there is enough "richness" in the conditional distribution $P(X|Z)$.
+3.  **Identifiability**: The paper shows that the interventional distribution
+    can still be identified when mean relevance is zero, as long as the
+    conditional distribution $P(X|Z)$ changes in other ways.
 
 ## Conclusion
 
-The simulation study confirms that DIV is **robustly superior** to traditional methods in the face of weak instruments. While methods that rely on $E[X|Z]$ break down completely as $\alpha \to 0$, DIV maintains near-perfect estimation accuracy by leveraging the information contained in the higher-order moments of the treatment distribution.
+This simulation illustrates why a mean-relevance check can miss useful
+variation. Methods that only use $E[X|Z]$ fail when $\alpha \to 0$, while DIV
+can still use changes in higher moments of the treatment distribution.

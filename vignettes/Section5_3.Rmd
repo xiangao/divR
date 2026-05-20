@@ -23,7 +23,9 @@ library(ggplot2)
 
 ## Introduction
 
-In Section 5.3 of the paper, we demonstrate the capability of DIV to handle multivariate endogenous variables. In many real-world applications, several treatment variables may be affected by the same unobserved confounding factors. DIV's generator-based architecture naturally extends to such cases.
+Section 5.3 of the paper studies the case with more than one endogenous
+treatment. Several treatments can be affected by the same unobserved
+confounder, so the joint distribution of the treatments matters.
 
 ## Data Generating Process
 
@@ -104,4 +106,7 @@ ggplot(plot_df, aes(x = X1)) +
 
 ## Conclusion
 
-As discussed in Section 5.3, DIV successfully recovers the partial interventional mean function even when the model must account for the joint distribution of multiple endogenous variables. This capability makes DIV a powerful tool for analyzing complex systems with multiple treatments.
+In this setting the target is a partial interventional mean function with more
+than one endogenous variable. The point of the example is to check whether the
+method can still recover that function when the joint distribution of the
+treatments matters.

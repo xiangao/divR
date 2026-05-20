@@ -23,7 +23,8 @@ library(ggplot2)
 
 ## Introduction
 
-In Section 5.1 of the paper, we conduct an extensive simulation study to examine the performance of DIV across several different settings. This vignette focuses on the most complex setting (Settings 5 & 6 in Figure 4), which features a highly nonlinear post-additive noise outcome model.
+This vignette reproduces the sinusoidal setting from Section 5.1 of the paper,
+corresponding to Settings 5 and 6 in Figure 4.
 
 ## Data Generating Process
 
